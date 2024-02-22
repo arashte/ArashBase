@@ -1,0 +1,292 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "virtualMachines_WinServer1_name": {
+            "defaultValue": "WinServer1",
+            "type": "String"
+        },
+        "networkInterfaces_winserver1627_name": {
+            "defaultValue": "winserver1627",
+            "type": "String"
+        },
+        "publicIPAddresses_WinServer1_ip_name": {
+            "defaultValue": "WinServer1-ip",
+            "type": "String"
+        },
+        "virtualNetworks_WinServer1_vnet_name": {
+            "defaultValue": "WinServer1-vnet",
+            "type": "String"
+        },
+        "networkSecurityGroups_WinServer1_nsg_name": {
+            "defaultValue": "WinServer1-nsg",
+            "type": "String"
+        },
+        "schedules_shutdown_computevm_winserver1_name": {
+            "defaultValue": "shutdown-computevm-winserver1",
+            "type": "String"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2023-06-01",
+            "name": "[parameters('networkSecurityGroups_WinServer1_nsg_name')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "RDP",
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups/securityRules', parameters('networkSecurityGroups_WinServer1_nsg_name'), 'RDP')]",
+                        "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+                        "properties": {
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "3389",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 300,
+                            "direction": "Inbound",
+                            "sourcePortRanges": [],
+                            "destinationPortRanges": [],
+                            "sourceAddressPrefixes": [],
+                            "destinationAddressPrefixes": []
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2023-06-01",
+            "name": "[parameters('publicIPAddresses_WinServer1_ip_name')]",
+            "location": "westus",
+            "sku": {
+                "name": "Standard",
+                "tier": "Regional"
+            },
+            "properties": {
+                "ipAddress": "40.118.225.42",
+                "publicIPAddressVersion": "IPv4",
+                "publicIPAllocationMethod": "Static",
+                "idleTimeoutInMinutes": 4,
+                "ipTags": []
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2023-06-01",
+            "name": "[parameters('virtualNetworks_WinServer1_vnet_name')]",
+            "location": "westus",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/16"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "default",
+                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_WinServer1_vnet_name'), 'default')]",
+                        "properties": {
+                            "addressPrefix": "10.0.0.0/24",
+                            "delegations": [],
+                            "privateEndpointNetworkPolicies": "Disabled",
+                            "privateLinkServiceNetworkPolicies": "Enabled"
+                        },
+                        "type": "Microsoft.Network/virtualNetworks/subnets"
+                    }
+                ],
+                "virtualNetworkPeerings": [],
+                "enableDdosProtection": false
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2023-03-01",
+            "name": "[parameters('virtualMachines_WinServer1_name')]",
+            "location": "westus",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_winserver1627_name'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "Standard_B2s"
+                },
+                "additionalCapabilities": {
+                    "hibernationEnabled": false
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2022-datacenter-azure-edition",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "osType": "Windows",
+                        "name": "[concat(parameters('virtualMachines_WinServer1_name'), '_OsDisk_1_ee2722c252f847a0b5b6c0beb8d95067')]",
+                        "createOption": "FromImage",
+                        "caching": "ReadWrite",
+                        "managedDisk": {
+                        },
+                        "deleteOption": "Delete"
+                    },
+                    "dataDisks": [],
+                    "diskControllerType": "SCSI"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('virtualMachines_WinServer1_name')]",
+                    "adminUsername": "arash",
+                    "adminPassword": "W3stern2020=",
+                    "windowsConfiguration": {
+                        "provisionVMAgent": true,
+                        "enableAutomaticUpdates": true,
+                        "patchSettings": {
+                            "patchMode": "AutomaticByOS",
+                            "assessmentMode": "ImageDefault",
+                            "enableHotpatching": false
+                        },
+                        "enableVMAgentPlatformUpdates": false
+                    },
+                    "secrets": [],
+                    "allowExtensionOperations": true,
+                    "requireGuestProvisionSignal": true
+                },
+                "securityProfile": {
+                    "uefiSettings": {
+                        "secureBootEnabled": true,
+                        "vTpmEnabled": true
+                    },
+                    "securityType": "TrustedLaunch"
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_winserver1627_name'))]",
+                            "properties": {
+                                "deleteOption": "Detach"
+                            }
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true
+                    }
+                }
+            }
+        },
+        {
+            "type": "microsoft.devtestlab/schedules",
+            "apiVersion": "2018-09-15",
+            "name": "[parameters('schedules_shutdown_computevm_winserver1_name')]",
+            "location": "westus",
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachines_WinServer1_name'))]"
+            ],
+            "properties": {
+                "status": "Enabled",
+                "taskType": "ComputeVmShutdownTask",
+                "dailyRecurrence": {
+                    "time": "1900"
+                },
+                "timeZoneId": "UTC",
+                "notificationSettings": {
+                    "status": "Enabled",
+                    "timeInMinutes": 30,
+                    "emailRecipient": "arash.farivarmoheb@lausd.net",
+                    "notificationLocale": "en"
+                },
+                "targetResourceId": "[resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachines_WinServer1_name'))]"
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+            "apiVersion": "2023-06-01",
+            "name": "[concat(parameters('networkSecurityGroups_WinServer1_nsg_name'), '/RDP')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_WinServer1_nsg_name'))]"
+            ],
+            "properties": {
+                "protocol": "TCP",
+                "sourcePortRange": "*",
+                "destinationPortRange": "3389",
+                "sourceAddressPrefix": "*",
+                "destinationAddressPrefix": "*",
+                "access": "Allow",
+                "priority": 300,
+                "direction": "Inbound",
+                "sourcePortRanges": [],
+                "destinationPortRanges": [],
+                "sourceAddressPrefixes": [],
+                "destinationAddressPrefixes": []
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "2023-06-01",
+            "name": "[concat(parameters('virtualNetworks_WinServer1_vnet_name'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworks_WinServer1_vnet_name'))]"
+            ],
+            "properties": {
+                "addressPrefix": "10.0.0.0/24",
+                "delegations": [],
+                "privateEndpointNetworkPolicies": "Disabled",
+                "privateLinkServiceNetworkPolicies": "Enabled"
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2023-06-01",
+            "name": "[parameters('networkInterfaces_winserver1627_name')]",
+            "location": "westus",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_WinServer1_ip_name'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_WinServer1_vnet_name'), 'default')]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_WinServer1_nsg_name'))]"
+            ],
+            "kind": "Regular",
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "id": "[concat(resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaces_winserver1627_name')), '/ipConfigurations/ipconfig1')]",
+                        "etag": "W/\"ce1c29f8-4832-4c7c-9aa5-927f844064a2\"",
+                        "type": "Microsoft.Network/networkInterfaces/ipConfigurations",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "privateIPAddress": "10.0.0.4",
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('publicIPAddresses_WinServer1_ip_name'))]",
+                                "properties": {
+                                    "deleteOption": "Detach"
+                                }
+                            },
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_WinServer1_vnet_name'), 'default')]"
+                            },
+                            "primary": true,
+                            "privateIPAddressVersion": "IPv4"
+                        }
+                    }
+                ],
+                "dnsSettings": {
+                    "dnsServers": []
+                },
+                "enableIPForwarding": false,
+                "disableTcpStateTracking": false,
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_WinServer1_nsg_name'))]"
+                },
+                "nicType": "Standard",
+                "auxiliaryMode": "None",
+                "auxiliarySku": "None"
+            }
+        }
+    ]
+}
